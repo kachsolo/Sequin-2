@@ -10,6 +10,7 @@ public:
     void processBlock(juce::AudioBuffer<float>& buffer,juce::MidiBuffer&) override {
         juce::ScopedNoDenormals nd;
         int n=buffer.getNumSamples();
+        if (buffer.getNumChannels() < 1 || n <= 0) return;
         if(n>static_cast<int>(dryScratchL.size())) { buffer.clear(); return; }
         auto* l=buffer.getWritePointer(0);auto* r=buffer.getNumChannels()>1?buffer.getWritePointer(1):nullptr;
         float sens=state.getRawParameterValue("sensitivity")->load();
@@ -73,7 +74,6 @@ public:
 class Sequin2Editor final : public juce::AudioProcessorEditor,private juce::Timer {
 public:
     explicit Sequin2Editor(Sequin2Processor& p):AudioProcessorEditor(p),proc(p) {
-        setSize(640,380);
         title.setText("SEQUIN 2  |  HARMONIC ENGINE PROTOTYPE",juce::dontSendNotification);
         title.setJustificationType(juce::Justification::centred);title.setColour(juce::Label::textColourId,juce::Colours::white);addAndMakeVisible(title);
         const char* ids[]={"sensitivity","depth","low","high","mix"};
@@ -84,7 +84,10 @@ public:
         }
         bypass.setButtonText("Bypass");addAndMakeVisible(bypass);
         bypassAttachment=std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(proc.state,"bypass",bypass);
-        stats.setJustificationType(juce::Justification::centred);addAndMakeVisible(stats);startTimerHz(12);
+        stats.setJustificationType(juce::Justification::centred);addAndMakeVisible(stats);
+        // All child components must exist before setSize() invokes resized().
+        setSize(640,380);
+        startTimerHz(12);
     }
     void paint(juce::Graphics& g) override {g.fillAll(juce::Colour(0xff101722));g.setColour(juce::Colour(0xff26374a));g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(8),12,1);}
     void resized() override {title.setBounds(20,20,600,42);for(int i=0;i<5;++i){int x=16+i*122;labels[i]->setBounds(x,105,120,25);sliders[i]->setBounds(x,130,120,120);}stats.setBounds(70,270,500,35);bypass.setBounds(265,320,110,35);}
